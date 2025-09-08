@@ -4,13 +4,13 @@ import time
 
 pygame.init()
 
-WIDTH, HEIGHT = 800, 600
+WIDTH, HEIGHT = 800, 800
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT)) #Window Setup
-pygame.display.set_caption("Frouge")
+pygame.display.set_caption("Frogue")
 
 cell_size = 10
-cols, rows = 80, 60
+cols, rows = 80, 80
 
 tiles = { #Tile Identifiers
     0: (30, 30, 30),#Void
@@ -22,10 +22,21 @@ tiles = { #Tile Identifiers
 }
 
 class Player(): #Player Manager
-    def __init__(self, grid_x, grid_y, cell_size):
+    def __init__(self, grid_x, grid_y, cell_size, dungeon_grid):
         self.grid_x = grid_x
         self.grid_y = grid_y
         self.cell_size = cell_size
+        self.dungeon_grid = dungeon_grid
+
+    def position (self, px, py):
+        self.dungeon_grid[py][px] = 3 # Set player position on grid
+
+    def move(self, dx, dy):
+        if self.dungeon_grid[self.grid_y + dy][self.grid_x + dx] == 1:
+            self.grid_x += dx # new x
+            self.grid_y += dy # new y
+            self.position(self.grid_x, self.grid_y) # move player
+            self.dungeon_grid[self.grid_y - dy][self.grid_x - dx] = 1 # Clear old position
 
 class Enemy(): #Enemy Manager
     print ("enemy")
@@ -45,8 +56,7 @@ class Dungeon(): #Dungeon Manager
             return False
 
         for ry, rx, rh, rw in self.rooms: # Check for overlap
-            if (x < rx + rw and x + w > rx and
-                y < ry + rh and y + h > ry):
+            if (x < rx + rw and x + w > rx and y < ry + rh and y + h > ry):
                 return False
 
         for row in range(y, y + h): # Add room to grid
@@ -83,17 +93,19 @@ class Dungeon(): #Dungeon Manager
         spawn_x = x + w // 2
         spawn_y = y + h // 2
 
-        self.grid[spawn_y][spawn_x] = 3  # Set player position
         return (spawn_x, spawn_y)
 
 def main(): #Game Loop
     game = True
 
     dungeon = Dungeon(rows, cols)
+
     dungeon.generate(random.randint(50, 150)) # Generate dungeon with random number of rooms
 
     spawn = dungeon.place_player() # Place player in dungeon
-    player = Player(spawn[0], spawn[1], cell_size)
+
+    player = Player(spawn[0], spawn[1], cell_size, dungeon.grid)
+    player.position(spawn[0], spawn[1]) # Set player position on grid)
 
     while game:
         for event in pygame.event.get():
@@ -101,14 +113,26 @@ def main(): #Game Loop
                 game = False
         screen.fill((0, 0, 0))
 
-        #Code Start
-
         for row in range(rows): # Draw the grid
             for col in range(cols):
                 value = dungeon.grid[row][col]
                 rect = pygame.Rect(col * cell_size, row * cell_size, cell_size, cell_size)
                 pygame.draw.rect(screen, tiles[value], rect)
                 pygame.draw.rect(screen, (30, 30, 30), rect, 1)
+
+        #Code Start
+
+        events = pygame.event.get()
+        for event in events:
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_LEFT: # Move Left
+                    player.move(-1, 0)
+                if event.key == pygame.K_RIGHT: # Move Right
+                    player.move(1, 0)
+                if event.key == pygame.K_UP: # Move Up
+                    player.move(0, -1)
+                if event.key == pygame.K_DOWN: # Move Down
+                    player.move(0, 1)
 
         #Code End
 
