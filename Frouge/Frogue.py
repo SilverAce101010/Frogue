@@ -14,11 +14,13 @@ cols, rows = 100, 100
 
 tiles = { #Tile Identifiers
     0: (30, 30, 30),#Void
-    1: (50, 50, 50),#Floor
-    2: (100, 100, 100),#Wall
-    3: (50, 200, 50),#Player
-    4: (200, 50, 50),#Enemy
-    5 : (50, 50, 200),#Loot
+    1: (50, 50, 50),#Floor 1
+    2: (70, 70, 70),#Floor 2
+    3: (120, 120, 120),#Wall 1
+    4: (150, 150, 150),#Wall 2
+    5: (50, 200, 50),#Player
+    6: (200, 50, 50),#Enemy
+    7 : (50, 50, 200),#Loot
 }
 
 class Camera():
@@ -43,19 +45,23 @@ class Player(): #Player Manager
         self.grid_y = grid_y
         self.cell_size = cell_size
         self.dungeon_grid = dungeon_grid
+        self.previous_tile = random.randint(1, 2)
 
     def position (self, px, py):
-        self.dungeon_grid[py][px] = 3 # Set player position on grid
+        self.grid_x = px # Update player grid x position
+        self.grid_y = py # Update player grid y position
+        self.dungeon_grid[py][px] = 5 # Set player position on grid
 
-    def camera_position(self): # gets a position for camera use
+    def camera_position(self): # gets x, y position for camera
         return (self.grid_x * self.cell_size + self.cell_size // 2, self.grid_y * self.cell_size + self.cell_size // 2)
 
     def move(self, dx, dy):
-        if self.dungeon_grid[self.grid_y + dy][self.grid_x + dx] == 1:
+        if self.dungeon_grid[self.grid_y + dy][self.grid_x + dx] in (1, 2):
+            self.dungeon_grid[self.grid_y][self.grid_x] = self.previous_tile # reset previous tile
             self.grid_x += dx # new x
             self.grid_y += dy # new y
+            self.previous_tile = self.dungeon_grid[self.grid_y][self.grid_x] # store new previous tile
             self.position(self.grid_x, self.grid_y) # move player
-            self.dungeon_grid[self.grid_y - dy][self.grid_x - dx] = 1 # Clear old position
 
 class Enemy(): #Enemy Manager
     def __init__(self, state):
@@ -72,6 +78,11 @@ class Dungeon(): #Dungeon Manager
         self.grid = [[0 for _ in range(cols)] for _ in range(rows)]
         self.rooms = [] # Room List
 
+    def reset(self): # Reset the dungeon
+        self.grid = [[0 for _ in range(self.cols)] for _ in range(self.rows)] # Clear grid
+        self.rooms.clear() # Clear room list
+        self.generate(random.randint(100, 150)) # Regenerate dungeon
+
     def add_room(self, x, y, w, h): # Add a room to the dungeon
         if x + w >= self.cols or y + h >= self.rows: # Make sure room fits
             return False
@@ -82,7 +93,7 @@ class Dungeon(): #Dungeon Manager
 
         for row in range(y, y + h): # Add room to grid
             for col in range(x, x + w):
-                self.grid[row][col] = 1
+                self.grid[row][col] = random.randint(1, 2) # Set floor tile
 
         self.rooms.append((y, x, h, w)) # Store room
         return True
@@ -90,8 +101,11 @@ class Dungeon(): #Dungeon Manager
     def add_walls(self, x, y, w, h): # Add walls around rooms
         for row in range(y - 1, y + h + 1): # Define wall hieght
             for col in range(x - 1, x + w + 1): # Define wall width
-                if (0 <= row < self.rows and 0 <= col < self.cols and self.grid[row][col] == 0): # Check if empty
-                    self.grid[row][col] = 2 # Set wall tile
+                if 0 <= row < self.rows and 0 <= col < self.cols:
+                    if self.grid[row][col] == 0:  # Only replace empty space
+                        self.grid[row][col] = random.randint(3, 4) # Set wall tile
+                    elif self.grid[row][col] in (3, 4): # If wall already exists
+                        self.grid[row][col] = random.randint(1,2)  # floor tile
 
     def generate(self, num_rooms, min_size=3, max_size=15): # Generate dungeon with rooms
         for _ in range(num_rooms): # Try to add rooms
@@ -103,8 +117,6 @@ class Dungeon(): #Dungeon Manager
            
         for (y, x, h, w) in self.rooms: # Add walls around rooms
             self.add_walls(x, y, w, h) # Attempt to add walls
-
-        print ("Rooms Loaded")
 
     def place_player(self):
         if not self.rooms:
@@ -120,15 +132,14 @@ def main(): #Game Loop
     game = True
 
     dungeon = Dungeon(rows, cols)
+    player = Player(0, 0, cell_size, dungeon.grid)
+    camera = Camera(800, 600)
 
-    dungeon.generate(random.randint(50, 150)) # Generate dungeon with random number of rooms
+    dungeon.generate(random.randint(100, 150)) # Generate dungeon with random number of rooms
 
     spawn = dungeon.place_player() # Place player in dungeon
 
-    player = Player(spawn[0], spawn[1], cell_size, dungeon.grid)
-    player.position(spawn[0], spawn[1]) # Set player position on grid)
-
-    camera = Camera(800, 600)
+    player.position(spawn[0], spawn[1]) # Set player position on grid
 
     while game:
         for event in pygame.event.get():
@@ -158,6 +169,8 @@ def main(): #Game Loop
                     player.move(0, -1)
                 if event.key == pygame.K_DOWN: # Move Down
                     player.move(0, 1)
+                if event.key == pygame.K_ESCAPE: # Quit Game
+                    game = False
 
         camera.center_on(player.camera_position())
 
