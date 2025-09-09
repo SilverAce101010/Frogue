@@ -4,13 +4,13 @@ import time
 
 pygame.init()
 
-WIDTH, HEIGHT = 800, 800
+WIDTH, HEIGHT = 800, 600
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT)) #Window Setup
 pygame.display.set_caption("Frogue")
 
-cell_size = 10
-cols, rows = 80, 80
+cell_size = 35
+cols, rows = 100, 100
 
 tiles = { #Tile Identifiers
     0: (30, 30, 30),#Void
@@ -20,6 +20,22 @@ tiles = { #Tile Identifiers
     4: (200, 50, 50),#Enemy
     5 : (50, 50, 200),#Loot
 }
+
+class Camera():
+    def __init__(self, screen_width, screen_height, catching = 0.1):
+        self.offset = pygame.Vector2(0, 0)
+        self.screen_width = screen_width # Width of camera view
+        self.screen_height = screen_height # Hieght of camera view
+        self.catching = catching # Camera catch up speed
+
+    def center_on(self, target_pos): # controls offset to center on desired position
+        desired_offset_x = target_pos[0] - self.screen_width // 2
+        desired_offset_y = target_pos[1] - self.screen_height // 2
+        self.offset.x += (desired_offset_x - self.offset.x) * self.catching # Smoothly move toward the desired offset
+        self.offset.y += (desired_offset_y - self.offset.y) * self.catching
+
+    def grid_to_screen(self, rect): # converts grid position to pixel position on screen
+        return rect.move(-self.offset.x, -self.offset.y)
 
 class Player(): #Player Manager
     def __init__(self, grid_x, grid_y, cell_size, dungeon_grid):
@@ -31,6 +47,9 @@ class Player(): #Player Manager
     def position (self, px, py):
         self.dungeon_grid[py][px] = 3 # Set player position on grid
 
+    def camera_position(self): # gets a position for camera use
+        return (self.grid_x * self.cell_size + self.cell_size // 2, self.grid_y * self.cell_size + self.cell_size // 2)
+
     def move(self, dx, dy):
         if self.dungeon_grid[self.grid_y + dy][self.grid_x + dx] == 1:
             self.grid_x += dx # new x
@@ -39,10 +58,12 @@ class Player(): #Player Manager
             self.dungeon_grid[self.grid_y - dy][self.grid_x - dx] = 1 # Clear old position
 
 class Enemy(): #Enemy Manager
-    print ("enemy")
+    def __init__(self, state):
+        self.state = state
 
 class Item(): #Item Manager
-    print ("item")
+    def __init__(self, item_type):
+        self.item_type = item_type
 
 class Dungeon(): #Dungeon Manager
     def __init__(self, rows, cols):
@@ -79,7 +100,7 @@ class Dungeon(): #Dungeon Manager
             x = random.randint(1, self.cols - w - 1) # Random x position
             y = random.randint(1, self.rows - h - 1) # Random y position
             self.add_room(x, y, w, h) # Attempt to add room using values
-            
+           
         for (y, x, h, w) in self.rooms: # Add walls around rooms
             self.add_walls(x, y, w, h) # Attempt to add walls
 
@@ -88,7 +109,7 @@ class Dungeon(): #Dungeon Manager
     def place_player(self):
         if not self.rooms:
             return None
-    
+   
         y, x, h, w = self.rooms[0] # Choose the center of the first room as spawn
         spawn_x = x + w // 2
         spawn_y = y + h // 2
@@ -107,6 +128,8 @@ def main(): #Game Loop
     player = Player(spawn[0], spawn[1], cell_size, dungeon.grid)
     player.position(spawn[0], spawn[1]) # Set player position on grid)
 
+    camera = Camera(800, 600)
+
     while game:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -115,10 +138,12 @@ def main(): #Game Loop
 
         for row in range(rows): # Draw the grid
             for col in range(cols):
-                value = dungeon.grid[row][col]
+                value = dungeon.grid[row][col] # Asign Color
                 rect = pygame.Rect(col * cell_size, row * cell_size, cell_size, cell_size)
-                pygame.draw.rect(screen, tiles[value], rect)
-                pygame.draw.rect(screen, (30, 30, 30), rect, 1)
+                rect = camera.grid_to_screen(rect) # Camera
+                pygame.draw.rect(screen, tiles[value], rect) # Color
+                pygame.draw.rect(screen, (30, 30, 30), rect, 1) # Grid
+
 
         #Code Start
 
@@ -133,6 +158,8 @@ def main(): #Game Loop
                     player.move(0, -1)
                 if event.key == pygame.K_DOWN: # Move Down
                     player.move(0, 1)
+
+        camera.center_on(player.camera_position())
 
         #Code End
 
