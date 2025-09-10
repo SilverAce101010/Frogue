@@ -9,7 +9,7 @@ WIDTH, HEIGHT = 800, 600
 screen = pygame.display.set_mode((WIDTH, HEIGHT)) #Window Setup
 pygame.display.set_caption("Frogue")
 
-cell_size = 35
+cell_size = 5
 cols, rows = 100, 100
 
 tiles = { #Tile Identifiers
@@ -64,8 +64,21 @@ class Player(): #Player Manager
             self.position(self.grid_x, self.grid_y) # move player
 
 class Enemy(): #Enemy Manager
-    def __init__(self, state):
-        self.state = state
+    def __init__(self, state, grid_x, grid_y, cell_size, dungeon_grid):
+        self.state = { #state Identifiers
+        0: "idle",
+        1: "move",
+        2: "melee",
+        3: "range",
+        }
+
+    def action(self, state):
+         current_state = self.state[state]
+
+    def position(self, dx, dy):
+        self.grid_x = dx # Update enemy grid x position
+        self.grid_y = dy # Update enemy grid y position
+        self.dungeon_grid[dy][dx] = 6 # Set enemy position on grid
 
 class Item(): #Item Manager
     def __init__(self, item_type):
@@ -102,10 +115,15 @@ class Dungeon(): #Dungeon Manager
         for row in range(y - 1, y + h + 1): # Define wall hieght
             for col in range(x - 1, x + w + 1): # Define wall width
                 if 0 <= row < self.rows and 0 <= col < self.cols:
-                    if self.grid[row][col] == 0:  # Only replace empty space
-                        self.grid[row][col] = random.randint(3, 4) # Set wall tile
+                    if self.grid[row][col] == 0:  # Only replace set tiles
+                        self.grid[row][col] = random.randint(3,4) # Set wall tile
                     elif self.grid[row][col] in (3, 4): # If wall already exists
                         self.grid[row][col] = random.randint(1,2)  # floor tile
+
+    def add_corridors(self, start_x, start_y, end_x, end_y): # add corridors between rooms
+        for row in range(start_y, end_y):
+            for col in range(start_x, end_x):
+                self.grid[row][col] = random.randint(1,2) # floor tile
 
     def generate(self, num_rooms, min_size=3, max_size=15): # Generate dungeon with rooms
         for _ in range(num_rooms): # Try to add rooms
