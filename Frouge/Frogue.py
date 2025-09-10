@@ -64,16 +64,16 @@ class Player(): #Player Manager
             self.position(self.grid_x, self.grid_y) # move player
 
 class Enemy(): #Enemy Manager
-    def __init__(self, state, grid_x, grid_y, cell_size, dungeon_grid):
+    def __init__(self, grid_x, grid_y, cell_size, dungeon_grid):
         self.state = { #state Identifiers
-        0: "idle",
-        1: "move",
-        2: "melee",
-        3: "range",
-        }
+            0: "idle",
+            1: "move",
+            2: "melee",
+            3: "range",
+            }
 
-    def action(self, state):
-         current_state = self.state[state]
+    def control(self):
+         print ("state")
 
     def position(self, dx, dy):
         self.grid_x = dx # Update enemy grid x position
@@ -83,6 +83,19 @@ class Enemy(): #Enemy Manager
 class Item(): #Item Manager
     def __init__(self, item_type):
         self.item_type = item_type
+        self.stats = { # weapon stats
+            0: "numeric",
+            1: "range",
+            2: "radius",
+            3: "effect",
+            }
+
+    def generate_item(self):
+        self.stats[0] = random.randint(0, 10)
+        self.stats[1] = random.randint(1, 10)
+        self.stats[2] = random.randint(0, 1)
+        self.stats[3] = "bleed", "sleep"
+        
 
 class Dungeon(): #Dungeon Manager
     def __init__(self, rows, cols):
