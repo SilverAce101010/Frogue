@@ -1,6 +1,7 @@
 import pygame
 import random
 import time
+import math
 
 pygame.init()
 
@@ -194,14 +195,49 @@ class Dungeon(): #Dungeon Manager
                     elif self.grid[row][col] in (3, 4): # If wall already exists
                         self.grid[row][col] = random.randint(1,2)  # floor tile
 
-    def add_corridors(self, start_x, start_y, end_x, end_y): # add corridors between rooms
-        if start_y == end_y: # Horizontal corridor
-            for col in range(min(start_x, end_x), max(start_x, end_x) + 1): # Ensure the corridor moves horizontally
-                self.grid[start_y][col] = random.randint(1, 2)  # Floor tile
+    def add_corridors(self, start_x, start_y, end_x, end_y, width=2): 
+        if random.choice([True, False]): # Randomize whether we go horizontal first or vertical first
+            for col in range(min(start_x, end_x), max(start_x, end_x) + 1): # Horizontal first
+                for w in range(-(width // 2), (width // 2) + 1):
+                    if 0 <= start_y + w < self.rows:
+                        self.grid[start_y + w][col] = random.randint(1, 2)
+            for row in range(min(start_y, end_y), max(start_y, end_y) + 1): # Vertical
+                for w in range(-(width // 2), (width // 2) + 1):
+                    if 0 <= row < self.rows:
+                        self.grid[row][end_x + w] = random.randint(1, 2)
+        else:
+            for row in range(min(start_y, end_y), max(start_y, end_y) + 1): # Vertical first
+                for w in range(-(width // 2), (width // 2) + 1):
+                    if 0 <= row < self.rows:
+                        self.grid[row][start_x + w] = random.randint(1, 2)
+            for col in range(min(start_x, end_x), max(start_x, end_x) + 1): # Horizontal
+                for w in range(-(width // 2), (width // 2) + 1):
+                    if 0 <= start_y + w < self.rows:
+                        self.grid[end_y + w][col] = random.randint(1, 2)
 
-        elif start_x == end_x:# Vertical corridor
-            for row in range(min(start_y, end_y), max(start_y, end_y) + 1):# Ensure the corridor moves vertically
-                self.grid[row][start_x] = random.randint(1, 2)  # Floor tile
+    def connect_closest_rooms(self):
+        connected = set()  # To avoid duplicate corridors
+        for i, (y, x, h, w) in enumerate(self.rooms):
+            cx, cy = x + w // 2, y + h // 2  # center of current room
+        
+            closest_j, closest_dist = None, float("inf") # Find closest room
+            for j, (ty, tx, th, tw) in enumerate(self.rooms):
+                if i == j:
+                    continue
+                if (i, j) in connected or (j, i) in connected:
+                    continue  # already connected
+            
+                tcx, tcy = tx + tw // 2, ty + th // 2
+                dist = math.dist((cx, cy), (tcx, tcy))
+                if dist < closest_dist:
+                    closest_dist = dist
+                    closest_j = j
+        
+            if closest_j is not None: # Connect to closest room
+                ty, tx, th, tw = self.rooms[closest_j]
+                tcx, tcy = tx + tw // 2, ty + th // 2
+                self.add_corridors(cx, cy, tcx, tcy)
+                connected.add((i, closest_j))
 
     def generate(self, num_rooms, min_size=3, max_size=15): # Generate dungeon with rooms
         for _ in range(num_rooms): # Try to add rooms
@@ -210,14 +246,10 @@ class Dungeon(): #Dungeon Manager
             x = random.randint(1, self.cols - w - 1) # Random x position
             y = random.randint(1, self.rows - h - 1) # Random y position
             self.add_room(x, y, w, h) # Attempt to add room using values
-           
+       
         for (y, x, h, w) in self.rooms: # Add walls around rooms
             self.add_walls(x, y, w, h) # Attempt to add walls
-
-        for i in range(1, len(self.rooms)): # Connect rooms with corridors
-            y, x, h, w = self.rooms[i]
-            ty, tx, th, tw = self.rooms[i - 1]
-            self.add_corridors(x + w // 2, y + h // 2, tx + tw // 2, ty + th // 2)
+        self.connect_closest_rooms() # Connect rooms to their closest neighbors
 
     def place_player(self):
         if not self.rooms:
