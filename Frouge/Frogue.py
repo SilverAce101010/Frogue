@@ -14,14 +14,14 @@ cell_size = 35
 cols, rows = 100, 100
 
 tiles = { #Tile Identifiers
-    0: (30, 30, 30),#Void
-    1: (50, 50, 50),#Floor 1
-    2: (70, 70, 70),#Floor 2
-    3: (120, 120, 120),#Wall 1
-    4: (150, 150, 150),#Wall 2
-    5: (50, 200, 50),#Player
-    6: (200, 50, 50),#Enemy
-    7 : (50, 50, 200),#Loot
+    0: pygame.image.load("sprites/void.png").convert_alpha(), # void
+    1: pygame.image.load("sprites/tile.png").convert_alpha(), # floor
+    2: pygame.image.load("sprites/broken_tile.png").convert_alpha(), # broken floor
+    3: pygame.image.load("sprites/SLIME.png").convert_alpha(), # wall
+    4: pygame.image.load("sprites/SLIME.png").convert_alpha(), # broken wall
+    5: pygame.image.load("sprites/player.png").convert_alpha(), # player
+    6: pygame.image.load("sprites/enemy.png").convert_alpha(), # enemy
+    7: pygame.image.load("sprites/void.png").convert_alpha(), # loot
 }
 stats = { # weapon stats
             "name": "",
@@ -104,18 +104,13 @@ class Enemy(): #Enemy Manager
             }
 
     def die(self):
-        if random.randint(1, 5) == 1 or 2: # 20% chance to drop loot
+        if random.randint() > 0.2: # chance to drop loot
             self.loot(self.item)
         else:
             self.dungeon_grid[self.grid_y][self.grid_x] = self.previous_tile # reset previous tile
 
     def loot(self,item):
         item.spawn(self.grid_x,self.grid_y) # spawn item at enemy position
-
-    def position(self, dx, dy):
-        self.grid_x = dx # Update enemy grid x position
-        self.grid_y = dy # Update enemy grid y position
-        self.dungeon_grid[dy][dx] = 6 # Set enemy position on grid
 
 class Item(): #Item Manager
     def __init__(self,stats,dungeon_grid):
@@ -143,7 +138,7 @@ class Item(): #Item Manager
             self.stats["radius"] = random.randint(0, 1)
             self.stats["effect"] = random.choice(["","stun","weaken","poison"])
         elif item_type == "consume":
-            self.type_name = random.choice(["potion"])
+            self.type_name = "potion"
             self.stats["numeric"] = random.randint(5, 10)
             self.stats["range"] = 0
             self.stats["radius"] = 0
@@ -165,6 +160,14 @@ class Dungeon(): #Dungeon Manager
         self.cols = cols
         self.grid = [[0 for _ in range(cols)] for _ in range(rows)]
         self.rooms = [] # Room List
+
+    def add_loot(self, x, y): # Add loot to the dungeon
+        if self.grid[y][x] in (1, 2):
+            self.grid[y][x] = 7
+
+    def place_enemy(self, x, y):
+        if self.grid[y][x] in (1, 2):
+            self.grid[y][x] = 6
 
     def add_room(self, x, y, w, h): # Add a room to the dungeon
         if x + w >= self.cols or y + h >= self.rows: # Make sure room fits
@@ -251,6 +254,18 @@ class Dungeon(): #Dungeon Manager
 
         self.add_walls() # Attempt to add walls
 
+        for (y, x, h, w) in self.rooms: # get all rooms
+            for _ in range(random.randint(0, 2)): # random loot per room
+                loot_x = random.randint(x, x + w - 1) # random x position in room
+                loot_y = random.randint(y, y + h - 1) # random y position in room
+                self.add_loot(loot_x, loot_y) # add loot to room
+
+        for (y, x, h, w) in self.rooms: # get all rooms
+            for _ in range(random.randint(0, 3)): # random enemies per room
+                enemy_x = random.randint(x, x + w - 1) # random x position in room
+                enemy_y = random.randint(y, y + h - 1) # random y position in room
+                self.place_enemy(enemy_x, enemy_y) # add enemy to room
+
     def place_player(self):
         if not self.rooms:
             return None
@@ -258,16 +273,6 @@ class Dungeon(): #Dungeon Manager
         y, x, h, w = self.rooms[0] # Choose the center of the first room as spawn
         spawn_x = x + w // 2
         spawn_y = y + h // 2
-
-        return (spawn_x, spawn_y)
-
-    def place_enemy(self):
-        if not self.rooms:
-            return None
-   
-        y, x, h, w = self.rooms[0] # Choose the center of the first room as spawn
-        spawn_x = x + w // 2 + 1
-        spawn_y = y + h // 2 + 1
 
         return (spawn_x, spawn_y)
 
@@ -283,10 +288,11 @@ def main(): #Game Loop
     dungeon.generate(random.randint(450, 550)) # Generate dungeon with random number of rooms
 
     spawn = dungeon.place_player() # Place player in dungeon
-    enemy_spawn = dungeon.place_enemy() # Place enemy in dungeon
 
     player.position(spawn[0], spawn[1]) # Set player position on grid
-    enemy.position(enemy_spawn[0], enemy_spawn[1]) # Set enemy position on grid
+
+    for key, img in tiles.items():
+        tiles[key] = pygame.transform.scale(img, (cell_size, cell_size))
 
     while game:
         for event in pygame.event.get():
@@ -299,8 +305,8 @@ def main(): #Game Loop
                 value = dungeon.grid[row][col] # Asign Color
                 rect = pygame.Rect(col * cell_size, row * cell_size, cell_size, cell_size)
                 rect = camera.grid_to_screen(rect) # Camera
-                pygame.draw.rect(screen, tiles[value], rect) # Color
-                pygame.draw.rect(screen, tiles[0], rect, 1) # Grid
+                screen.blit(tiles[value], rect.topleft) # Draw Tile
+                pygame.draw.rect(screen, (30,30,30), rect, 1) # Grid
 
 
         #Code Start

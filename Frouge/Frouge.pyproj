@@ -23,6 +23,17 @@
   <ItemGroup>
     <Compile Include="Frogue.py" />
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="sprites\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="sprites\broken_tile.png" />
+    <Content Include="sprites\player.png" />
+    <Content Include="sprites\SLIME.png" />
+    <Content Include="sprites\tile.png" />
+    <Content Include="sprites\enemy.png" />
+    <Content Include="sprites\void.png" />
+  </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in
        Visual Studio and specify your pre- and post-build commands in
