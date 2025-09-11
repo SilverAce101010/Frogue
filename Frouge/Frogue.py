@@ -10,7 +10,7 @@ WIDTH, HEIGHT = 800, 600
 screen = pygame.display.set_mode((WIDTH, HEIGHT)) #Window Setup
 pygame.display.set_caption("Frogue")
 
-cell_size = 5
+cell_size = 35
 cols, rows = 100, 100
 
 tiles = { #Tile Identifiers
@@ -166,90 +166,90 @@ class Dungeon(): #Dungeon Manager
         self.grid = [[0 for _ in range(cols)] for _ in range(rows)]
         self.rooms = [] # Room List
 
-    def reset(self): # Reset the dungeon
-        self.grid = [[0 for _ in range(self.cols)] for _ in range(self.rows)] # Clear grid
-        self.rooms.clear() # Clear room list
-        self.generate(random.randint(100, 150)) # Regenerate dungeon
-
     def add_room(self, x, y, w, h): # Add a room to the dungeon
         if x + w >= self.cols or y + h >= self.rows: # Make sure room fits
-            return False
+            return (0,0,0,0)
 
         for ry, rx, rh, rw in self.rooms: # Check for overlap
             if (x < rx + rw and x + w > rx and y < ry + rh and y + h > ry):
-                return False
+                return (0,0,0,0)
 
         for row in range(y, y + h): # Add room to grid
             for col in range(x, x + w):
                 self.grid[row][col] = random.randint(1, 2) # Set floor tile
 
         self.rooms.append((y, x, h, w)) # Store room
-        return True
+        return (y,x,h,w)
 
-    def add_walls(self, x, y, w, h): # Add walls around rooms
-        for row in range(y - 1, y + h + 1): # Define wall hieght
-            for col in range(x - 1, x + w + 1): # Define wall width
+    def add_walls(self): # Add walls around rooms
+        for col in range(cols): # Define wall hieght
+             for row in range(rows): # Define wall width
                 if 0 <= row < self.rows and 0 <= col < self.cols:
-                    if self.grid[row][col] == 0:  # Only replace set tiles
-                        self.grid[row][col] = random.randint(3,4) # Set wall tile
-                    elif self.grid[row][col] in (3, 4): # If wall already exists
-                        self.grid[row][col] = random.randint(1,2)  # floor tile
-
-    def add_corridors(self, start_x, start_y, end_x, end_y, width=2): 
-        if random.choice([True, False]): # Randomize whether we go horizontal first or vertical first
-            for col in range(min(start_x, end_x), max(start_x, end_x) + 1): # Horizontal first
-                for w in range(-(width // 2), (width // 2) + 1):
-                    if 0 <= start_y + w < self.rows:
-                        self.grid[start_y + w][col] = random.randint(1, 2)
-            for row in range(min(start_y, end_y), max(start_y, end_y) + 1): # Vertical
-                for w in range(-(width // 2), (width // 2) + 1):
-                    if 0 <= row < self.rows:
-                        self.grid[row][end_x + w] = random.randint(1, 2)
-        else:
-            for row in range(min(start_y, end_y), max(start_y, end_y) + 1): # Vertical first
-                for w in range(-(width // 2), (width // 2) + 1):
-                    if 0 <= row < self.rows:
-                        self.grid[row][start_x + w] = random.randint(1, 2)
-            for col in range(min(start_x, end_x), max(start_x, end_x) + 1): # Horizontal
-                for w in range(-(width // 2), (width // 2) + 1):
-                    if 0 <= start_y + w < self.rows:
-                        self.grid[end_y + w][col] = random.randint(1, 2)
-
-    def connect_closest_rooms(self):
-        connected = set()  # To avoid duplicate corridors
-        for i, (y, x, h, w) in enumerate(self.rooms):
-            cx, cy = x + w // 2, y + h // 2  # center of current room
-        
-            closest_j, closest_dist = None, float("inf") # Find closest room
-            for j, (ty, tx, th, tw) in enumerate(self.rooms):
-                if i == j:
-                    continue
-                if (i, j) in connected or (j, i) in connected:
-                    continue  # already connected
-            
-                tcx, tcy = tx + tw // 2, ty + th // 2
-                dist = math.dist((cx, cy), (tcx, tcy))
-                if dist < closest_dist:
-                    closest_dist = dist
-                    closest_j = j
-        
-            if closest_j is not None: # Connect to closest room
-                ty, tx, th, tw = self.rooms[closest_j]
-                tcx, tcy = tx + tw // 2, ty + th // 2
-                self.add_corridors(cx, cy, tcx, tcy)
-                connected.add((i, closest_j))
+                    if ((col > 0 and self.grid[row][col - 1] in (1, 2)) or
+                        (col < cols - 1 and self.grid[row][col + 1] in (1, 2)) or
+                        (row > 0 and self.grid[row - 1][col] in (1, 2)) or
+                        (row < rows - 1 and self.grid[row + 1][col] in (1, 2))):
+                        if self.grid[row][col] == 0:  # Only replace set tiles
+                            self.grid[row][col] = random.randint(3,4) # Set wall tile
+                        elif self.grid[row][col] in (3, 4): # If wall already exists
+                            self.grid[row][col] = random.randint(1,2)  # floor tile
 
     def generate(self, num_rooms, min_size=3, max_size=15): # Generate dungeon with rooms
-        for _ in range(num_rooms): # Try to add rooms
+        w = random.randint(min_size, max_size) # Random width
+        h = random.randint(min_size, max_size) # Random height
+        x = random.randint(1, self.cols - w - 1) # Random x position
+        y = random.randint(1, self.rows - h - 1) # Random y position
+        ny,nx,nh,nw = self.add_room(x, y, w, h) # Attempt to add room using values
+
+        for _ in range(num_rooms - 1):
+            if not self.rooms:
+                break
+
+            ry, rx, rh, rw = random.choice(self.rooms) # Pick a random room
+
+            cx, cy = self.cols // 2, self.rows // 2 # offset from center
+            room_cx, room_cy = rx + rw // 2, ry + rh // 2
+
+            directions = []
+            if room_cx < cx: 
+                directions.append(0)  # more likely to grow left
+            if room_cx > cx: 
+                directions.append(1)  # more likely to grow right
+            if room_cy < cy: 
+                directions.append(2)  # more likely to grow up
+            if room_cy > cy: 
+                directions.append(3)  # more likely to grow down
+
+            side = random.choice(directions + [0, 1, 2, 3])
+
             w = random.randint(min_size, max_size) # Random width
             h = random.randint(min_size, max_size) # Random height
-            x = random.randint(1, self.cols - w - 1) # Random x position
-            y = random.randint(1, self.rows - h - 1) # Random y position
-            self.add_room(x, y, w, h) # Attempt to add room using values
-       
-        for (y, x, h, w) in self.rooms: # Add walls around rooms
-            self.add_walls(x, y, w, h) # Attempt to add walls
-        self.connect_closest_rooms() # Connect rooms to their closest neighbors
+
+            if side == 0:  # left
+                x = rx - w
+                y = ry + random.randint(0, rh - 1)
+            elif side == 1:  # right
+                x = rx + rw
+                y = ry + random.randint(0, rh - 1)
+            elif side == 2:  # top
+                x = rx + random.randint(0, rw - 1)
+                y = ry - h
+            else:  # bottom
+                x = rx + random.randint(0, rw - 1)
+                y = ry + rh
+
+            if x < 2: # Keep rooms in bounds
+                x = 2
+            if y < 2: 
+                y = 2
+            if x + w >= self.cols - 2: 
+                x = self.cols - w - 2
+            if y + h >= self.rows - 2: 
+                y = self.rows - h - 2
+
+            self.add_room(x, y, w, h)
+
+        self.add_walls() # Attempt to add walls
 
     def place_player(self):
         if not self.rooms:
@@ -280,7 +280,7 @@ def main(): #Game Loop
     enemy = Enemy(0, 0, cell_size, dungeon.grid,item)
     camera = Camera(800, 600)
 
-    dungeon.generate(random.randint(100, 150)) # Generate dungeon with random number of rooms
+    dungeon.generate(random.randint(450, 550)) # Generate dungeon with random number of rooms
 
     spawn = dungeon.place_player() # Place player in dungeon
     enemy_spawn = dungeon.place_enemy() # Place enemy in dungeon
@@ -300,7 +300,7 @@ def main(): #Game Loop
                 rect = pygame.Rect(col * cell_size, row * cell_size, cell_size, cell_size)
                 rect = camera.grid_to_screen(rect) # Camera
                 pygame.draw.rect(screen, tiles[value], rect) # Color
-                pygame.draw.rect(screen, (30, 30, 30), rect, 1) # Grid
+                pygame.draw.rect(screen, tiles[0], rect, 1) # Grid
 
 
         #Code Start
