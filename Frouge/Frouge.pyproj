@@ -29,7 +29,6 @@
   <ItemGroup>
     <Content Include="sprites\broken_tile.png" />
     <Content Include="sprites\player.png" />
-    <Content Include="sprites\SLIME.png" />
     <Content Include="sprites\tile.png" />
     <Content Include="sprites\enemy.png" />
     <Content Include="sprites\void.png" />

@@ -17,8 +17,8 @@ tiles = { #Tile Identifiers
     0: pygame.image.load("sprites/void.png").convert_alpha(), # void
     1: pygame.image.load("sprites/tile.png").convert_alpha(), # floor
     2: pygame.image.load("sprites/broken_tile.png").convert_alpha(), # broken floor
-    3: pygame.image.load("sprites/SLIME.png").convert_alpha(), # wall
-    4: pygame.image.load("sprites/SLIME.png").convert_alpha(), # broken wall
+    3: pygame.image.load("sprites/void.png").convert_alpha(), # wall
+    4: pygame.image.load("sprites/void.png").convert_alpha(), # broken wall
     5: pygame.image.load("sprites/player.png").convert_alpha(), # player
     6: pygame.image.load("sprites/enemy.png").convert_alpha(), # enemy
     7: pygame.image.load("sprites/void.png").convert_alpha(), # loot
